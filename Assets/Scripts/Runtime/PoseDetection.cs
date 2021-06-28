@@ -33,7 +33,7 @@ namespace Pose.Detection
         [SerializeField] private NNModel modelAsset;
         [SerializeField] private GameObject[] keypoints;
         [SerializeField] private WorkerFactory.Type workerType = WorkerFactory.Type.Auto;
-        [SerializeField] private int minConfidence = 30;
+        [SerializeField] private int minConfidence = 75;
 
 
         private int _videoHeight;
@@ -56,20 +56,19 @@ namespace Pose.Detection
         void Start()
         {
 
-            //TODO: Create Model from onnx asset and compile it to an object
+            //Create Model from onnx asset and compile it to an object
             heatmap_output = "float_heatmaps";
             offsets_output ="float_short_offsets";
             prediction_prob = "heatmap_predictions";
             m_RunTimeModel = ModelLoader.Load(modelAsset);
             var modelBuilder = new ModelBuilder(m_RunTimeModel);
 
-            //TODO: Add Layers to model
+            //Add Layers to model
             modelBuilder.Sigmoid(prediction_prob, heatmap_output);
-            //TODO: Create Worker Engine
+
+            //Create Worker Engine
             engine = WorkerFactory.CreateWorker(workerType, modelBuilder.model);
 
-
-            Transform videoQuad = GameObject.Find("videoQuad").transform;
             GameObject videoPlayer = GameObject.Find("Video Player");
             _videoHeight = (int)videoPlayer.GetComponent<VideoPlayer>().height;
             _videoWidth = (int)videoPlayer.GetComponent<VideoPlayer>().width;
@@ -83,7 +82,7 @@ namespace Pose.Detection
             videoTexture.Release();
 
             //Apply Texture to Quad
-            //videoQuad = GameObject.Find("videoQuad");
+            Transform videoQuad = GameObject.Find("videoQuad").transform;
             videoQuad.gameObject.GetComponent<MeshRenderer>().material.SetTexture(MainTex, videoTexture);
             videoQuad.transform.localScale = new Vector3(_videoWidth, _videoHeight, videoQuad.transform.localScale.z);
             //videoQuad.transform.position = new Vector3(0, 0, 1);
@@ -94,7 +93,6 @@ namespace Pose.Detection
             if (mainCamera != null)
             {
                 mainCamera.transform.position = new Vector3(_videoWidth / 2, _videoHeight / 2, -(_videoWidth / 2));
-                //mainCamera.transform.position = new Vector3(0, 0, -(_videoWidth / 2));
                 mainCamera.GetComponent<Camera>().orthographicSize = _videoHeight / 2;
             }
 
@@ -108,26 +106,30 @@ namespace Pose.Detection
             videoQuad.SetActive(false);
             Texture2D processedImage = PreprocessTexture();
 
-            //TODO: Create Tensor 
+            //Create Tensor 
             Tensor input = new Tensor(processedImage, channels: 3);
-            //TODO: Execute Engine
+
+            //Execute Engine
             var inputs = new Dictionary<string, Tensor> {
                         { INPUT_NAME, input }
                    };
             engine.Execute(inputs);
-            //TODO: Process Results
+
+            //Process Results
             ProcessResults(engine.PeekOutput(prediction_prob), engine.PeekOutput(offsets_output));
 
-            //TODO: Draw Skeleton
+            //Draw Skeleton
             DrawSkeleton();
-            //TODO: Clean up tensors and other resources
+
+            //Clean up tensors and other resources
             Destroy(processedImage);
         }
 
         private void OnDisable()
         {
-            //TODO: Release the inference engine
+            //Release the inference engine
             engine.Dispose();
+
             //Release videoTexture
             videoTexture.Release();
         }
@@ -216,7 +218,7 @@ namespace Pose.Detection
             Texture2D tempTex = Resize(imageTexture, imageHeight, imageWidth);
             Destroy(imageTexture);
 
-            // TODO: Apply model-specific preprocessing
+            //Apply model-specific preprocessing
             imageTexture = PreprocessNetwork(tempTex);
 
             Destroy(tempTex);
